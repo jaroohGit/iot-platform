@@ -1,8 +1,18 @@
 <template>
   <div class="dashboard">
     <div class="page-header">
-      <h1 class="page-title">Industrial Monitoring Dashboard</h1>
-      <p class="page-description">Real-time monitoring of Flow Rate, ORP, pH, and Power systems</p>
+      <div>
+        <h1 class="page-title">Industrial Monitoring Dashboard</h1>
+        <p class="page-description">Real-time monitoring of Flow Rate, ORP, pH, and Power systems</p>
+      </div>
+      <div class="connection-status">
+        <span class="status-indicator" :class="{ 
+          'connected': connectionStatus === 'Connected',
+          'disconnected': connectionStatus === 'Disconnected',
+          'connecting': connectionStatus === 'Connecting...'
+        }"></span>
+        <span class="status-text">{{ connectionStatus }}</span>
+      </div>
     </div>
     
     <!-- Device Status Cards -->
@@ -13,8 +23,11 @@
         </div>
         <div class="stat-content">
           <h3 class="stat-title">Flow Rate Devices</h3>
-          <p class="stat-value">3 Active</p>
-          <span class="stat-change positive">All systems operational</span>
+            <p class="stat-value real-time">{{ flowRate }} L/h</p>
+          <span class="stat-change positive">
+            <span class="live-indicator"></span>
+            All systems operational
+          </span>
         </div>
       </div>
       
@@ -24,8 +37,11 @@
         </div>
         <div class="stat-content">
           <h3 class="stat-title">ORP Devices</h3>
-          <p class="stat-value">6 Active</p>
-          <span class="stat-change positive">Normal oxidation levels</span>
+          <p class="stat-value real-time">{{ orpLevel }} mV</p>
+          <span class="stat-change positive">
+            <span class="live-indicator"></span>
+            Normal oxidation levels
+          </span>
         </div>
       </div>
       
@@ -35,8 +51,11 @@
         </div>
         <div class="stat-content">
           <h3 class="stat-title">pH Devices</h3>
-          <p class="stat-value">6 Active</p>
-          <span class="stat-change positive">pH levels stable</span>
+          <p class="stat-value real-time">{{ pHLevel }} pH</p>
+          <span class="stat-change positive">
+            <span class="live-indicator"></span>
+            pH levels stable
+          </span>
         </div>
       </div>
       
@@ -46,8 +65,11 @@
         </div>
         <div class="stat-content">
           <h3 class="stat-title">Power Meter</h3>
-          <p class="stat-value">1 Active</p>
-          <span class="stat-change positive">Consumption: 2.4 kW</span>
+          <p class="stat-value real-time">{{ powerConsumption }} kW</p>
+          <span class="stat-change positive">
+            <span class="live-indicator"></span>
+            Real-time consumption
+          </span>
         </div>
       </div>
     </div>
@@ -134,6 +156,8 @@
 </template>
 
 <script>
+import { ref, onMounted, onUnmounted } from 'vue'
+import { io } from 'socket.io-client'
 import { 
   Droplets,
   Zap, 
@@ -152,6 +176,109 @@ export default {
     Gauge,
     BarChart3,
     PieChart
+  },
+  setup() {
+    const flowRate = ref(125.4)
+    const orpLevel = ref(450)
+    const pHLevel = ref(7.2)
+    const powerConsumption = ref(2.4)
+    const connectionStatus = ref('Connecting...')
+    let socket = null
+
+    // Initialize WebSocket connection
+    const initializeWebSocket = () => {
+      console.log('Attempting to connect to backend...')
+      // Use window.location.hostname to automatically detect if accessing via IP or localhost
+      const backendHost = window.location.hostname === 'localhost' ? 'localhost' : '148.135.137.236'
+      const backendUrl = `http://${backendHost}:3001`
+      console.log('Backend URL:', backendUrl)
+      
+      socket = io(backendUrl, {
+        transports: ['polling', 'websocket'],
+        timeout: 20000,
+        reconnection: true,
+        reconnectionDelay: 1000,
+        reconnectionAttempts: 5,
+        maxReconnectionAttempts: 5,
+        forceNew: true
+      })
+
+      socket.on('connect', () => {
+        console.log('✅ Connected to IoT Backend Server:', socket.id)
+        connectionStatus.value = 'Connected'
+      })
+
+      socket.on('disconnect', (reason) => {
+        console.log('❌ Disconnected from IoT Backend Server:', reason)
+        connectionStatus.value = 'Disconnected'
+      })
+
+      socket.on('connect_error', (error) => {
+        console.error('🔴 Connection error:', error)
+        console.error('Error details:', error.message, error.description)
+        connectionStatus.value = 'Connection Error'
+      })
+
+      socket.on('reconnect', (attemptNumber) => {
+        console.log('🔄 Reconnected after', attemptNumber, 'attempts')
+      })
+
+      socket.on('reconnect_attempt', (attemptNumber) => {
+        console.log('🔄 Reconnection attempt:', attemptNumber)
+        connectionStatus.value = 'Reconnecting...'
+      })
+
+      socket.on('reconnect_error', (error) => {
+        console.error('🔴 Reconnection error:', error)
+      })
+
+      socket.on('reconnect_failed', () => {
+        console.error('🔴 Reconnection failed')
+        connectionStatus.value = 'Connection Failed'
+      })
+
+      // Listen for real-time device data
+      socket.on('deviceData', (data) => {
+        console.log('Received device data:', data)
+        flowRate.value = data.flowRate
+        orpLevel.value = data.orpLevel
+        pHLevel.value = data.pHLevel
+        powerConsumption.value = data.powerConsumption
+      })
+
+      // Listen for activity logs
+      socket.on('activityLog', (log) => {
+        console.log('New activity log:', log)
+        // You can add activity log handling here
+      })
+
+      // Listen for device status updates
+      socket.on('deviceStatus', (status) => {
+        console.log('Device status update:', status)
+        // You can add device status handling here
+      })
+    }
+
+    onMounted(() => {
+      // Initialize WebSocket connection when component mounts
+      initializeWebSocket()
+    })
+
+    onUnmounted(() => {
+      // Clean up WebSocket connection when component unmounts
+      if (socket) {
+        socket.disconnect()
+        console.log('WebSocket connection closed')
+      }
+    })
+
+    return {
+      flowRate,
+      orpLevel,
+      pHLevel,
+      powerConsumption,
+      connectionStatus
+    }
   }
 }
 </script>
@@ -163,6 +290,48 @@ export default {
 
 .page-header {
   margin-bottom: 32px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.connection-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: white;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.status-indicator {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+}
+
+.status-indicator.connected {
+  background: #10b981;
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.4);
+}
+
+.status-indicator.disconnected {
+  background: #ef4444;
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.4);
+}
+
+.status-indicator.connecting {
+  background: #f59e0b;
+  animation: pulse 2s infinite;
+}
+
+.status-text {
+  font-size: 14px;
+  font-weight: 500;
+  color: #64748b;
 }
 
 .page-title {
@@ -224,6 +393,38 @@ export default {
   font-weight: 700;
   color: #1e293b;
   margin: 0 0 4px 0;
+  transition: color 0.3s ease;
+}
+
+.stat-value.real-time {
+  animation: valueUpdate 1s ease-in-out infinite alternate;
+}
+
+@keyframes valueUpdate {
+  0% { transform: scale(1); }
+  100% { transform: scale(1.02); }
+}
+
+.live-indicator {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  background: #10b981;
+  border-radius: 50%;
+  margin-right: 6px;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(16, 185, 129, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+  }
 }
 
 .stat-change {
@@ -339,6 +540,16 @@ export default {
   
   .stats-grid {
     grid-template-columns: 1fr;
+  }
+  
+  .page-header {
+    flex-direction: column;
+    gap: 16px;
+    align-items: stretch;
+  }
+  
+  .connection-status {
+    align-self: flex-start;
   }
 }
 </style>

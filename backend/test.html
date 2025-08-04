@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IoT Backend Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .status { padding: 10px; border-radius: 5px; margin: 10px 0; }
+        .connected { background: #d4edda; color: #155724; }
+        .disconnected { background: #f8d7da; color: #721c24; }
+        .data-card { background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>IoT Backend Connection Test</h1>
+        <div id="status" class="status disconnected">Disconnected</div>
+        
+        <div class="data-card">
+            <h3>Real-time Device Data</h3>
+            <div id="flowRate">Flow Rate: --</div>
+            <div id="orpLevel">ORP Level: --</div>
+            <div id="pHLevel">pH Level: --</div>
+            <div id="powerConsumption">Power Consumption: --</div>
+            <div id="lastUpdate">Last Update: --</div>
+        </div>
+        
+        <div class="data-card">
+            <h3>Activity Log</h3>
+            <div id="activityLog">No activities yet...</div>
+        </div>
+    </div>
+
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script>
+        const socket = io('http://localhost:3001');
+        const statusEl = document.getElementById('status');
+        
+        socket.on('connect', () => {
+            statusEl.textContent = 'Connected to IoT Backend';
+            statusEl.className = 'status connected';
+        });
+        
+        socket.on('disconnect', () => {
+            statusEl.textContent = 'Disconnected from IoT Backend';
+            statusEl.className = 'status disconnected';
+        });
+        
+        socket.on('deviceData', (data) => {
+            document.getElementById('flowRate').textContent = `Flow Rate: ${data.flowRate} L/h`;
+            document.getElementById('orpLevel').textContent = `ORP Level: ${data.orpLevel} mV`;
+            document.getElementById('pHLevel').textContent = `pH Level: ${data.pHLevel} pH`;
+            document.getElementById('powerConsumption').textContent = `Power Consumption: ${data.powerConsumption} kW`;
+            document.getElementById('lastUpdate').textContent = `Last Update: ${new Date(data.lastUpdate).toLocaleTimeString()}`;
+        });
+        
+        socket.on('activityLog', (log) => {
+            const logEl = document.getElementById('activityLog');
+            const newLog = document.createElement('div');
+            newLog.innerHTML = `<strong>${log.device}:</strong> ${log.message} <em>(${new Date(log.timestamp).toLocaleTimeString()})</em>`;
+            logEl.insertBefore(newLog, logEl.firstChild);
+            
+            // Keep only last 5 logs
+            while (logEl.children.length > 5) {
+                logEl.removeChild(logEl.lastChild);
+            }
+        });
+    </script>
+</body>
+</html>
