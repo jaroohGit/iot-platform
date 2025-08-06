@@ -419,7 +419,7 @@ app.get('/', (req, res) => {
 });
 
 // Start simulation intervals
-setInterval(updateDeviceData, 1000); // Update every second
+setInterval(updateDeviceData, 10000); // Update every second
 setInterval(emitActivityLog, 5000); // Generate activity log every 5 seconds
 
 // Start server

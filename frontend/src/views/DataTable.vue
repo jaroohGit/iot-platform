@@ -378,6 +378,9 @@ export default {
 .data-table-page {
   min-height: 100vh;
   padding: 20px;
+  /* Override the content-wrapper max-width to allow full table width */
+  max-width: none !important;
+  width: 100%;
 }
 
 .page-header {
@@ -479,6 +482,7 @@ export default {
   border-radius: 12px;
   border: 1px solid #e2e8f0;
   overflow: hidden;
+  width: 100%;
 }
 
 .table-stats {
