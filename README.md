@@ -10,23 +10,30 @@
 - **Responsive Design**: ใช้งานได้ทั้งเดสก์ท็อปและมือถือ
 - **External Access**: เข้าถึงได้จากอุปกรณ์ภายนอก
 
-## 📁 โครงสร้างโปรเจกต์
+## 📁 Project Structure
 
 ```
 iot-monitoring-platform/
-├── src/                # Vue.js Frontend
-│   ├── views/
-│   │   └── Dashboard.vue
-│   ├── components/
-│   │   └── layout/
-│   └── App.vue
-├── backend/            # Node.js Backend
-│   ├── server.js
-│   ├── package.json
-│   └── public/
-│       └── external-test.html
-├── package.json
-└── README.md
+├── frontend/              # Vue.js Frontend Application
+│   ├── src/              # Vue.js source code
+│   │   ├── components/   # Vue components
+│   │   ├── views/        # Page components (Dashboard, Users, etc.)
+│   │   ├── assets/       # Static assets
+│   │   ├── App.vue       # Main Vue component
+│   │   └── main.js       # Vue.js entry point
+│   ├── public/           # Static files
+│   ├── index.html        # HTML template
+│   ├── vite.config.js    # Vite configuration
+│   └── package.json      # Frontend dependencies
+├── backend/              # Node.js Backend Server
+│   ├── server.js         # Express server with Socket.IO
+│   ├── timescaledb.js    # Database connection module
+│   ├── public/           # Static files served by backend
+│   └── package.json      # Backend dependencies
+├── database/             # Database setup scripts
+│   └── setup_timescaledb.sql  # TimescaleDB initialization
+├── README.md             # Project documentation
+└── package.json          # Main project configuration
 ```
 
 ## 🛠️ เทคโนโลยีที่ใช้
@@ -44,41 +51,61 @@ iot-monitoring-platform/
 - CORS Support
 - Real-time Data Simulation
 
-## 🚀 การติดตั้งและรัน
+## 🚀 Quick Start
 
-### 1. Clone โปรเจกต์
+### Installation
+
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/jaroohGit/iot-platform.git
+   cd iot-platform
+   ```
+
+2. **Install all dependencies:**
+   ```bash
+   npm run setup
+   ```
+
+### Development
+
+**Start both frontend and backend in development mode:**
 ```bash
-git clone https://github.com/jaroohGit/iot-platform.git
-cd iot-platform
+npm run start:dev
 ```
 
-### 2. ติดตั้ง Dependencies
+**Or run them separately:**
 
-#### Frontend
+1. **Backend only:**
+   ```bash
+   npm run backend:dev
+   ```
+
+2. **Frontend only:**
+   ```bash
+   npm run frontend:dev
+   ```
+
+### Production Build
+
+**Build frontend for production:**
 ```bash
+npm run build
+```
+
+### Individual Setup
+
+**Frontend setup:**
+```bash
+cd frontend
 npm install
+npm run dev
 ```
 
-#### Backend
+**Backend setup:**
 ```bash
 cd backend
 npm install
-cd ..
-```
-
-### 3. รันโปรเจกต์
-
-#### เริ่ม Backend Server
-```bash
-cd backend
 npm run dev
-# รันที่ http://localhost:3001
-```
-
-#### เริ่ม Frontend Server (terminal ใหม่)
-```bash
-npm run dev
-# รันที่ http://localhost:5173
 ```
 
 ## 🌐 การเข้าถึง
