@@ -2,6 +2,7 @@ const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
 const cors = require('cors');
+const TimescaleDB = require('./timescaledb');
 
 const app = express();
 const server = http.createServer(app);
@@ -128,29 +129,87 @@ function generateActivityLog() {
 }
 
 // Update device data every second
-function updateDeviceData() {
+async function updateDeviceData() {
   deviceData.flowRate = simulateFlowRate();
   deviceData.orpLevel = simulateORPLevel();
   deviceData.pHLevel = simulatePHLevel();
   deviceData.powerConsumption = simulatePowerConsumption();
   deviceData.lastUpdate = new Date().toISOString();
 
-  // Update individual device readings
-  deviceStatus.flowRateDevices.devices.forEach(device => {
-    device.lastReading = simulateFlowRate();
-  });
+  // Update individual device readings and store in TimescaleDB
+  for (const device of deviceStatus.flowRateDevices.devices) {
+    const value = simulateFlowRate();
+    device.lastReading = value;
+    
+    // Store in TimescaleDB
+    await TimescaleDB.insertSensorReading(
+      device.id,
+      'flow_rate',
+      `Tank ${device.id.slice(-1)}`,
+      {
+        value: value,
+        unit: 'L/h',
+        quality: 'good',
+        temperature: 20 + Math.random() * 10
+      }
+    );
+  }
   
-  deviceStatus.orpDevices.devices.forEach(device => {
-    device.lastReading = simulateORPLevel();
-  });
+  for (const device of deviceStatus.orpDevices.devices) {
+    const value = simulateORPLevel();
+    device.lastReading = value;
+    
+    // Store in TimescaleDB
+    await TimescaleDB.insertSensorReading(
+      device.id,
+      'orp_level',
+      `Treatment Pool ${device.id.slice(-1)}`,
+      {
+        value: value,
+        unit: 'mV',
+        quality: 'good',
+        temperature: 20 + Math.random() * 5
+      }
+    );
+  }
   
-  deviceStatus.pHDevices.devices.forEach(device => {
-    device.lastReading = simulatePHLevel();
-  });
+  for (const device of deviceStatus.pHDevices.devices) {
+    const value = simulatePHLevel();
+    device.lastReading = value;
+    
+    // Store in TimescaleDB
+    await TimescaleDB.insertSensorReading(
+      device.id,
+      'ph_level',
+      `pH Monitor ${device.id.slice(-1)}`,
+      {
+        value: value,
+        unit: 'pH',
+        quality: 'good',
+        temperature: 20 + Math.random() * 6
+      }
+    );
+  }
   
-  deviceStatus.powerMeters.devices.forEach(device => {
-    device.lastReading = simulatePowerConsumption();
-  });
+  for (const device of deviceStatus.powerMeters.devices) {
+    const value = simulatePowerConsumption();
+    device.lastReading = value;
+    
+    // Store in TimescaleDB
+    await TimescaleDB.insertSensorReading(
+      device.id,
+      'power_meter',
+      'Main Panel',
+      {
+        value: value,
+        unit: 'kW',
+        quality: 'good',
+        power_factor: 0.9 + Math.random() * 0.1,
+        voltage: 220 + Math.random() * 20,
+        current: 10 + Math.random() * 5
+      }
+    );
+  }
 
   // Emit to all connected clients
   io.emit('deviceData', deviceData);
@@ -198,48 +257,132 @@ io.engine.on('connection_error', (err) => {
 });
 
 // REST API endpoints
-app.get('/api/devices', (req, res) => {
-  res.json({
-    data: deviceData,
-    status: deviceStatus,
-    timestamp: new Date().toISOString()
-  });
+app.get('/api/devices', async (req, res) => {
+  try {
+    const deviceSummary = await TimescaleDB.getDeviceSummary();
+    const allReadings = await TimescaleDB.getAllLatestReadings();
+    
+    res.json({
+      data: deviceData,
+      status: deviceStatus,
+      summary: deviceSummary,
+      latest_readings: allReadings,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('API Error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
-app.get('/api/devices/flow-rate', (req, res) => {
-  res.json({
-    value: deviceData.flowRate,
-    unit: 'L/h',
-    devices: deviceStatus.flowRateDevices,
-    timestamp: deviceData.lastUpdate
-  });
+app.get('/api/devices/flow-rate', async (req, res) => {
+  try {
+    const readings = await TimescaleDB.getLatestReadingsByType('flow_rate');
+    res.json({
+      value: deviceData.flowRate,
+      unit: 'L/h',
+      devices: deviceStatus.flowRateDevices,
+      readings: readings,
+      timestamp: deviceData.lastUpdate
+    });
+  } catch (error) {
+    console.error('API Error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
-app.get('/api/devices/orp', (req, res) => {
-  res.json({
-    value: deviceData.orpLevel,
-    unit: 'mV',
-    devices: deviceStatus.orpDevices,
-    timestamp: deviceData.lastUpdate
-  });
+app.get('/api/devices/orp', async (req, res) => {
+  try {
+    const readings = await TimescaleDB.getLatestReadingsByType('orp_level');
+    res.json({
+      value: deviceData.orpLevel,
+      unit: 'mV',
+      devices: deviceStatus.orpDevices,
+      readings: readings,
+      timestamp: deviceData.lastUpdate
+    });
+  } catch (error) {
+    console.error('API Error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
-app.get('/api/devices/ph', (req, res) => {
-  res.json({
-    value: deviceData.pHLevel,
-    unit: 'pH',
-    devices: deviceStatus.pHDevices,
-    timestamp: deviceData.lastUpdate
-  });
+app.get('/api/devices/ph', async (req, res) => {
+  try {
+    const readings = await TimescaleDB.getLatestReadingsByType('ph_level');
+    res.json({
+      value: deviceData.pHLevel,
+      unit: 'pH',
+      devices: deviceStatus.pHDevices,
+      readings: readings,
+      timestamp: deviceData.lastUpdate
+    });
+  } catch (error) {
+    console.error('API Error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
-app.get('/api/devices/power', (req, res) => {
-  res.json({
-    value: deviceData.powerConsumption,
-    unit: 'kW',
-    devices: deviceStatus.powerMeters,
-    timestamp: deviceData.lastUpdate
-  });
+app.get('/api/devices/power', async (req, res) => {
+  try {
+    const readings = await TimescaleDB.getLatestReadingsByType('power_meter');
+    res.json({
+      value: deviceData.powerConsumption,
+      unit: 'kW',
+      devices: deviceStatus.powerMeters,
+      readings: readings,
+      timestamp: deviceData.lastUpdate
+    });
+  } catch (error) {
+    console.error('API Error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// New API endpoints for TimescaleDB data
+app.get('/api/history/:deviceType', async (req, res) => {
+  try {
+    const { deviceType } = req.params;
+    const { startTime, endTime, limit } = req.query;
+    
+    const readings = await TimescaleDB.getSensorReadings(
+      null,
+      deviceType,
+      startTime ? new Date(startTime) : new Date(Date.now() - 24 * 60 * 60 * 1000), // Default: last 24 hours
+      endTime ? new Date(endTime) : new Date(),
+      limit ? parseInt(limit) : 100
+    );
+    
+    res.json({
+      device_type: deviceType,
+      readings: readings,
+      count: readings.length
+    });
+  } catch (error) {
+    console.error('API Error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.get('/api/analytics/:deviceType', async (req, res) => {
+  try {
+    const { deviceType } = req.params;
+    const { startTime, endTime } = req.query;
+    
+    const start = startTime ? new Date(startTime) : new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const end = endTime ? new Date(endTime) : new Date();
+    
+    const hourlyData = await TimescaleDB.getHourlyAverages(deviceType, start, end);
+    
+    res.json({
+      device_type: deviceType,
+      period: { start, end },
+      hourly_averages: hourlyData
+    });
+  } catch (error) {
+    console.error('API Error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
 app.get('/api/health', (req, res) => {
