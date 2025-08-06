@@ -213,6 +213,12 @@ async function updateDeviceData() {
 
   // Emit to all connected clients
   io.emit('deviceData', deviceData);
+  io.emit('deviceStatus', deviceStatus);
+  
+  // Log data emission for debugging
+  if (io.engine.clientsCount > 0) {
+    console.log(`📡 Emitted device data to ${io.engine.clientsCount} clients - Flow: ${deviceData.flowRate}L/h, ORP: ${deviceData.orpLevel}mV, pH: ${deviceData.pHLevel}, Power: ${deviceData.powerConsumption}kW`);
+  }
 }
 
 // Generate random activity logs
@@ -227,6 +233,12 @@ function emitActivityLog() {
   io.emit('activityLog', logEntry);
 }
 
+// Emit real-time device status updates
+function emitDeviceStatus() {
+  io.emit('deviceStatus', deviceStatus);
+  console.log(`📡 Emitted device status to ${io.engine.clientsCount} clients`);
+}
+
 // Socket.IO connection handling
 io.on('connection', (socket) => {
   console.log(`✅ Client connected: ${socket.id} from ${socket.handshake.address}`);
@@ -235,6 +247,14 @@ io.on('connection', (socket) => {
   // Send current data immediately to new client
   socket.emit('deviceData', deviceData);
   socket.emit('deviceStatus', deviceStatus);
+  
+  // Send a welcome message with connection status
+  socket.emit('connectionStatus', {
+    status: 'connected',
+    message: 'Successfully connected to IoT Backend Server',
+    timestamp: new Date().toISOString(),
+    clientId: socket.id
+  });
   
   // Handle client disconnect
   socket.on('disconnect', (reason) => {
@@ -245,6 +265,11 @@ io.on('connection', (socket) => {
   // Handle client requesting device status
   socket.on('requestDeviceStatus', () => {
     socket.emit('deviceStatus', deviceStatus);
+  });
+  
+  // Handle client requesting current device data
+  socket.on('requestDeviceData', () => {
+    socket.emit('deviceData', deviceData);
   });
 });
 
@@ -419,8 +444,9 @@ app.get('/', (req, res) => {
 });
 
 // Start simulation intervals
-setInterval(updateDeviceData, 10000); // Update every second
+setInterval(updateDeviceData, 1000); // Update every second for real-time data
 setInterval(emitActivityLog, 5000); // Generate activity log every 5 seconds
+setInterval(emitDeviceStatus, 2000); // Emit device status every 2 seconds
 
 // Start server
 const PORT = process.env.PORT || 3001;

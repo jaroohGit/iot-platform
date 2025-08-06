@@ -30,7 +30,10 @@
     <div v-if="error" class="error-container">
       <AlertCircle class="w-6 h-6" />
       <p>{{ error }}</p>
-      <button @click="fetchData" class="retry-btn">Try Again</button>
+      <div class="error-actions">
+        <button @click="fetchData" class="retry-btn">Try Again</button>
+        <button @click="checkNetworkAndRetry" class="retry-btn secondary">Check Connection</button>
+      </div>
     </div>
 
     <!-- Data Table -->
@@ -246,17 +249,38 @@ export default {
       error.value = null
       
       try {
+        // Use dynamic host detection for tablet/mobile compatibility
+        const backendHost = window.location.hostname === 'localhost' ? 'localhost' : window.location.hostname
+        const backendUrl = `http://${backendHost}:3001`
+        
         const endpoint = selectedDeviceType.value 
           ? `/api/history/${selectedDeviceType.value}?limit=1000`
           : '/api/devices'
         
-        const response = await fetch(`http://localhost:3001${endpoint}`)
+        const fullUrl = `${backendUrl}${endpoint}`
+        console.log('Fetching data from:', fullUrl)
+        console.log('User agent:', navigator.userAgent)
+        console.log('Window location:', window.location.href)
+        
+        const response = await fetch(fullUrl, {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+          },
+          // Add timeout for mobile networks
+          signal: AbortSignal.timeout(30000) // 30 second timeout
+        })
+        
+        console.log('Response status:', response.status)
+        console.log('Response headers:', response.headers)
         
         if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`)
+          throw new Error(`HTTP error! status: ${response.status} - ${response.statusText}`)
         }
         
         const data = await response.json()
+        console.log('Received data:', data)
         
         if (selectedDeviceType.value) {
           sensorData.value = data.readings || []
@@ -264,9 +288,24 @@ export default {
           sensorData.value = data.latest_readings || []
         }
         
+        console.log('Processed sensor data:', sensorData.value.length, 'records')
         currentPage.value = 1
       } catch (err) {
-        error.value = `Failed to fetch data: ${err.message}`
+        console.error('Error details:', err)
+        
+        // Provide more specific error messages
+        let errorMessage = 'Unknown error occurred'
+        if (err.name === 'TypeError' && err.message.includes('fetch')) {
+          errorMessage = 'Network error: Cannot connect to server. Please check your internet connection.'
+        } else if (err.name === 'AbortError') {
+          errorMessage = 'Request timeout: The server took too long to respond.'
+        } else if (err.message.includes('HTTP error')) {
+          errorMessage = `Server error: ${err.message}`
+        } else {
+          errorMessage = `Failed to fetch data: ${err.message}`
+        }
+        
+        error.value = errorMessage
         console.error('Error fetching sensor data:', err)
       } finally {
         loading.value = false
@@ -275,6 +314,34 @@ export default {
     
     const refreshData = () => {
       fetchData()
+    }
+    
+    // Add network connectivity check
+    const checkNetworkAndRetry = async () => {
+      if (!navigator.onLine) {
+        error.value = 'No internet connection. Please check your network and try again.'
+        return
+      }
+      
+      // Try to ping the health endpoint first
+      try {
+        const backendHost = window.location.hostname === 'localhost' ? 'localhost' : window.location.hostname
+        const healthUrl = `http://${backendHost}:3001/api/health`
+        const healthResponse = await fetch(healthUrl, { 
+          method: 'GET',
+          signal: AbortSignal.timeout(10000) // 10 second timeout for health check
+        })
+        
+        if (healthResponse.ok) {
+          console.log('Backend health check passed')
+          fetchData()
+        } else {
+          throw new Error(`Backend health check failed: ${healthResponse.status}`)
+        }
+      } catch (err) {
+        error.value = `Cannot reach server. Please check if the backend is running and accessible from your device. Error: ${err.message}`
+        console.error('Health check failed:', err)
+      }
     }
     
     const sortBy = (field) => {
@@ -360,6 +427,7 @@ export default {
       sortedData,
       fetchData,
       refreshData,
+      checkNetworkAndRetry,
       sortBy,
       prevPage,
       nextPage,
@@ -464,14 +532,33 @@ export default {
   color: #ef4444;
 }
 
-.retry-btn {
+.error-actions {
+  display: flex;
+  gap: 12px;
   margin-top: 16px;
+}
+
+.retry-btn {
   padding: 8px 16px;
   background: #ef4444;
   color: white;
   border: none;
   border-radius: 6px;
   cursor: pointer;
+  font-size: 14px;
+  transition: background 0.2s;
+}
+
+.retry-btn:hover {
+  background: #dc2626;
+}
+
+.retry-btn.secondary {
+  background: #6b7280;
+}
+
+.retry-btn.secondary:hover {
+  background: #4b5563;
 }
 
 .table-container {
@@ -775,6 +862,55 @@ export default {
   
   .detail-grid {
     grid-template-columns: 1fr;
+  }
+  
+  /* Better tablet table handling */
+  .table-wrapper {
+    overflow-x: scroll;
+    -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+  }
+  
+  .data-table {
+    min-width: 800px; /* Prevent table from being too cramped */
+  }
+  
+  .data-table th,
+  .data-table td {
+    padding: 12px 16px; /* Slightly less padding on mobile */
+    font-size: 13px;
+  }
+  
+  /* Hide less important columns on small screens */
+  .data-table th:nth-child(4), /* Location */
+  .data-table td:nth-child(4),
+  .data-table th:nth-child(8), /* Temperature */
+  .data-table td:nth-child(8) {
+    display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .data-table th:nth-child(7), /* Quality */
+  .data-table td:nth-child(7) {
+    display: none;
+  }
+  
+  .page-title {
+    font-size: 24px;
+  }
+}
+
+/* Tablet specific styles */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .data-table th,
+  .data-table td {
+    padding: 14px 18px;
+    font-size: 13px;
+  }
+  
+  .table-container {
+    margin: 0 auto;
+    max-width: 100%;
   }
 }
 </style>
