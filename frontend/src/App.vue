@@ -427,17 +427,18 @@ export default {
 .main-content {
   flex: 1;
   margin-top: 64px;
+  margin-left: 0px;
   transition: margin-left 0.3s ease;
 }
 
 .main-content.sidebar-open {
-  margin-left: 280px;
+  margin-left: 0px;
 }
 
 .content-wrapper {
   padding: 24px;
-  max-width: 1200px;
-  margin: 0 auto;
+  width: 100%;
+  margin: 0;
 }
 
 /* Sidebar Overlay */
@@ -475,7 +476,7 @@ export default {
   
   .main-content {
     margin-top: 64px;
-    margin-left: 280px;
+    margin-left: 0px;
   }
   
   .sidebar-overlay {

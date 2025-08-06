@@ -378,9 +378,6 @@ export default {
 .data-table-page {
   min-height: 100vh;
   padding: 20px;
-  /* Override the content-wrapper max-width to allow full table width */
-  max-width: none !important;
-  width: 100%;
 }
 
 .page-header {
