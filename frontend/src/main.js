@@ -9,6 +9,7 @@ const Users = () => import('./views/Users.vue')
 const Products = () => import('./views/Products.vue')
 const Analytics = () => import('./views/Analytics.vue')
 const Settings = () => import('./views/Settings.vue')
+const DataTable = () => import('./views/DataTable.vue')
 
 // Create router
 const routes = [
@@ -35,6 +36,12 @@ const routes = [
     name: 'Analytics', 
     component: Analytics,
     meta: { title: 'Analytics' }
+  },
+  { 
+    path: '/data-table', 
+    name: 'DataTable', 
+    component: DataTable,
+    meta: { title: 'Data Table' }
   },
   { 
     path: '/settings', 

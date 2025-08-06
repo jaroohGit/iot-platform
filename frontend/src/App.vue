@@ -107,7 +107,8 @@ import {
   Users,
   Package,
   BarChart3,
-  Cog
+  Cog,
+  Database
 } from 'lucide-vue-next'
 
 export default {
@@ -124,7 +125,8 @@ export default {
     Users,
     Package,
     BarChart3,
-    Cog
+    Cog,
+    Database
   },
   setup() {
     const sidebarOpen = ref(false)
@@ -134,6 +136,7 @@ export default {
       { name: 'Users', path: '/users', label: 'Users', icon: 'Users' },
       { name: 'Products', path: '/products', label: 'Products', icon: 'Package' },
       { name: 'Analytics', path: '/analytics', label: 'Analytics', icon: 'BarChart3' },
+      { name: 'DataTable', path: '/data-table', label: 'Data Table', icon: 'Database' },
       { name: 'Settings', path: '/settings', label: 'Settings', icon: 'Cog' }
     ]
     
