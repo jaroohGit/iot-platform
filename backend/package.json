@@ -16,11 +16,15 @@
   "author": "jaroohGit",
   "license": "MIT",
   "dependencies": {
+    "aedes": "^0.51.3",
+    "aedes-persistence-level": "^9.1.2",
     "cors": "^2.8.5",
     "express": "^4.18.2",
     "mosca": "^2.8.3",
+    "mqtt": "^5.14.0",
     "pg": "^8.16.3",
-    "socket.io": "^4.7.2"
+    "socket.io": "^4.7.2",
+    "ws": "^8.18.3"
   },
   "devDependencies": {
     "nodemon": "^3.0.1"

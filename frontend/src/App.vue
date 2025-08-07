@@ -108,7 +108,8 @@ import {
   Package,
   BarChart3,
   Cog,
-  Database
+  Database,
+  Radio
 } from 'lucide-vue-next'
 
 export default {
@@ -126,7 +127,8 @@ export default {
     Package,
     BarChart3,
     Cog,
-    Database
+    Database,
+    Radio
   },
   setup() {
     const sidebarOpen = ref(false)
@@ -137,6 +139,7 @@ export default {
       { name: 'Products', path: '/products', label: 'Products', icon: 'Package' },
       { name: 'Analytics', path: '/analytics', label: 'Analytics', icon: 'BarChart3' },
       { name: 'DataTable', path: '/data-table', label: 'Data Table', icon: 'Database' },
+      { name: 'MQTTDashboard', path: '/mqtt-dashboard', label: 'MQTT Dashboard', icon: 'Radio' },
       { name: 'Settings', path: '/settings', label: 'Settings', icon: 'Cog' }
     ]
     

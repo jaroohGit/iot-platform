@@ -1,0 +1,40 @@
+{
+  "name": "mqtt-broker-server",
+  "version": "1.0.0",
+  "description": "MQTT Broker for external publishers - IoT Platform",
+  "main": "mqtt-broker.js",
+  "scripts": {
+    "start": "node mqtt-broker.js",
+    "broker": "node mqtt-broker.js",
+    "subscriber": "node mqtt_subscriber.js",
+    "dev": "nodemon mqtt-broker.js",
+    "client": "node mqtt-client.js",
+    "external-publisher": "node external-mqtt-publisher.js",
+    "test-publisher": "node test-publisher.js",
+    "setup-network": "./setup-network.sh",
+    "install-deps": "npm install"
+  },
+  "keywords": [
+    "mqtt",
+    "iot",
+    "broker",
+    "aedes",
+    "external",
+    "publisher"
+  ],
+  "author": "IoT Platform",
+  "license": "MIT",
+  "dependencies": {
+    "aedes": "^0.50.0",
+    "express": "^5.1.0",
+    "mqtt": "^5.3.4",
+    "socket.io": "^4.8.1",
+    "ws": "^8.16.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}

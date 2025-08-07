@@ -13,63 +13,76 @@
         }"></span>
         <span class="status-text">{{ connectionStatus }}</span>
       </div>
+      
+      <!-- Data Status -->
+      <div class="data-status" v-if="lastUpdate">
+        <div class="data-info">
+          <span class="data-label">Last Update:</span>
+          <span class="data-value">{{ formatTime(lastUpdate) }}</span>
+        </div>
+        <div class="data-info" v-if="deviceCount > 0">
+          <span class="data-label">Active Devices:</span>
+          <span class="data-value">{{ deviceCount }}</span>
+        </div>
+      </div>
     </div>
     
-    <!-- Device Status Cards -->
+    <!-- Combined Sensor Data Card -->
     <div class="stats-grid">
-      <div class="stat-card">
-        <div class="stat-icon blue">
-          <Droplets class="w-6 h-6" />
-        </div>
-        <div class="stat-content">
-          <h3 class="stat-title">Flow Rate Devices</h3>
-            <p class="stat-value real-time">{{ flowRate }} L/h</p>
-          <span class="stat-change positive">
+      <div class="combined-stat-card">
+        <div class="card-header">
+          <h3 class="card-title">Live Sensor Data</h3>
+          <div class="connection-indicator">
             <span class="live-indicator"></span>
-            All systems operational
-          </span>
+            {{ isDataReceiving ? 'Live MQTT Data' : 'Waiting for data...' }}
+          </div>
         </div>
-      </div>
-      
-      <div class="stat-card">
-        <div class="stat-icon green">
-          <Zap class="w-6 h-6" />
+        
+        <div class="sensor-grid">
+          <div class="sensor-item">
+            <div class="sensor-icon blue">
+              <Droplets class="w-5 h-5" />
+            </div>
+            <div class="sensor-data">
+              <span class="sensor-label">Flow Rate</span>
+              <span class="sensor-value">{{ flowRate }} L/h</span>
+            </div>
+          </div>
+          
+          <div class="sensor-item">
+            <div class="sensor-icon green">
+              <Zap class="w-5 h-5" />
+            </div>
+            <div class="sensor-data">
+              <span class="sensor-label">ORP Level</span>
+              <span class="sensor-value">{{ orpLevel }} mV</span>
+            </div>
+          </div>
+          
+          <div class="sensor-item">
+            <div class="sensor-icon purple">
+              <TestTube class="w-5 h-5" />
+            </div>
+            <div class="sensor-data">
+              <span class="sensor-label">pH Level</span>
+              <span class="sensor-value">{{ pHLevel }} pH</span>
+            </div>
+          </div>
+          
+          <div class="sensor-item">
+            <div class="sensor-icon orange">
+              <Gauge class="w-5 h-5" />
+            </div>
+            <div class="sensor-data">
+              <span class="sensor-label">Power</span>
+              <span class="sensor-value">{{ powerConsumption }} kW</span>
+            </div>
+          </div>
         </div>
-        <div class="stat-content">
-          <h3 class="stat-title">ORP Devices</h3>
-          <p class="stat-value real-time">{{ orpLevel }} mV</p>
-          <span class="stat-change positive">
-            <span class="live-indicator"></span>
-            Normal oxidation levels
-          </span>
-        </div>
-      </div>
-      
-      <div class="stat-card">
-        <div class="stat-icon purple">
-          <TestTube class="w-6 h-6" />
-        </div>
-        <div class="stat-content">
-          <h3 class="stat-title">pH Devices</h3>
-          <p class="stat-value real-time">{{ pHLevel }} pH</p>
-          <span class="stat-change positive">
-            <span class="live-indicator"></span>
-            pH levels stable
-          </span>
-        </div>
-      </div>
-      
-      <div class="stat-card">
-        <div class="stat-icon orange">
-          <Gauge class="w-6 h-6" />
-        </div>
-        <div class="stat-content">
-          <h3 class="stat-title">Power Meter</h3>
-          <p class="stat-value real-time">{{ powerConsumption }} kW</p>
-          <span class="stat-change positive">
-            <span class="live-indicator"></span>
-            Real-time consumption
-          </span>
+        
+        <div class="card-footer" v-if="lastUpdate">
+          <span class="last-update">Last Update: {{ formatTime(lastUpdate) }}</span>
+          <span class="device-count" v-if="deviceCount > 0">{{ deviceCount }} Devices Active</span>
         </div>
       </div>
     </div>
@@ -115,8 +128,8 @@
               <Droplets class="w-4 h-4" />
             </div>
             <div class="activity-content">
-              <p class="activity-text">Flow Rate Device #FR001: <strong>Normal operation resumed</strong></p>
-              <span class="activity-time">2 minutes ago</span>
+              <p class="activity-text">Flow Rate Device <strong>FR_001</strong>: {{ flowRate !== '--' ? `Current rate ${flowRate} L/h` : 'Waiting for data...' }}</p>
+              <span class="activity-time">{{ lastUpdate ? formatTime(lastUpdate) : 'No data' }}</span>
             </div>
           </div>
           
@@ -125,8 +138,8 @@
               <Zap class="w-4 h-4" />
             </div>
             <div class="activity-content">
-              <p class="activity-text">ORP Device #ORP003: Calibration completed</p>
-              <span class="activity-time">8 minutes ago</span>
+              <p class="activity-text">ORP Devices <strong>ORP_001 & ORP_002</strong>: {{ orpLevel !== '--' ? `Average level ${orpLevel} mV` : 'Waiting for data...' }}</p>
+              <span class="activity-time">{{ lastUpdate ? formatTime(lastUpdate) : 'No data' }}</span>
             </div>
           </div>
           
@@ -135,8 +148,8 @@
               <TestTube class="w-4 h-4" />
             </div>
             <div class="activity-content">
-              <p class="activity-text">pH Device #PH005: Reading within normal range</p>
-              <span class="activity-time">15 minutes ago</span>
+              <p class="activity-text">pH Devices <strong>PH_001 & PH_002</strong>: {{ pHLevel !== '--' ? `Average pH ${pHLevel}` : 'Waiting for data...' }}</p>
+              <span class="activity-time">{{ lastUpdate ? formatTime(lastUpdate) : 'No data' }}</span>
             </div>
           </div>
           
@@ -145,8 +158,8 @@
               <Gauge class="w-4 h-4" />
             </div>
             <div class="activity-content">
-              <p class="activity-text">Power Meter #PM001: Monthly report generated</p>
-              <span class="activity-time">1 hour ago</span>
+              <p class="activity-text">Power Meter <strong>PM_001</strong>: {{ powerConsumption !== '--' ? `Current consumption ${powerConsumption} kW` : 'Waiting for data...' }}</p>
+              <span class="activity-time">{{ lastUpdate ? formatTime(lastUpdate) : 'No data' }}</span>
             </div>
           </div>
         </div>
@@ -156,7 +169,7 @@
 </template>
 
 <script>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { io } from 'socket.io-client'
 import { 
   Droplets,
@@ -178,20 +191,30 @@ export default {
     PieChart
   },
   setup() {
-    const flowRate = ref(125.4)
-    const orpLevel = ref(450)
-    const pHLevel = ref(7.2)
-    const powerConsumption = ref(2.4)
+    const flowRate = ref('--')
+    const orpLevel = ref('--')
+    const pHLevel = ref('--')
+    const powerConsumption = ref('--')
     const connectionStatus = ref('Connecting...')
+    const lastUpdate = ref(null)
+    const deviceCount = ref(0)
     let socket = null
+
+    // Computed property to check if we're receiving data
+    const isDataReceiving = computed(() => {
+      return flowRate.value !== '--' || 
+             orpLevel.value !== '--' || 
+             pHLevel.value !== '--' || 
+             powerConsumption.value !== '--'
+    })
 
     // Initialize WebSocket connection
     const initializeWebSocket = () => {
-      console.log('Attempting to connect to backend...')
-      // Use window.location.hostname to automatically detect if accessing via IP or localhost
+      console.log('Attempting to connect to MQTT Test backend...')
+      // Connect to the server.js in mqtt_test directory (port 3001)
       const backendHost = window.location.hostname === 'localhost' ? 'localhost' : '148.135.137.236'
       const backendUrl = `http://${backendHost}:3001`
-      console.log('Backend URL:', backendUrl)
+      console.log('MQTT Test Backend URL:', backendUrl)
       
       socket = io(backendUrl, {
         transports: ['polling', 'websocket'],
@@ -204,12 +227,12 @@ export default {
       })
 
       socket.on('connect', () => {
-        console.log('✅ Connected to IoT Backend Server:', socket.id)
+        console.log('✅ Connected to MQTT Test Backend Server:', socket.id)
         connectionStatus.value = 'Connected'
       })
 
       socket.on('disconnect', (reason) => {
-        console.log('❌ Disconnected from IoT Backend Server:', reason)
+        console.log('❌ Disconnected from MQTT Test Backend Server:', reason)
         connectionStatus.value = 'Disconnected'
       })
 
@@ -237,13 +260,92 @@ export default {
         connectionStatus.value = 'Connection Failed'
       })
 
-      // Listen for real-time device data
+      // Listen for real-time device data from MQTT Test server
       socket.on('deviceData', (data) => {
-        console.log('Received device data:', data)
-        flowRate.value = data.flowRate
-        orpLevel.value = data.orpLevel
-        pHLevel.value = data.pHLevel
-        powerConsumption.value = data.powerConsumption
+        console.log('📊 Received MQTT device data:', data)
+        
+        // Handle the format from /home/teddy/mqtt_test/server.js
+        if (data.flowRate !== undefined) flowRate.value = data.flowRate
+        if (data.orpLevel !== undefined) orpLevel.value = data.orpLevel
+        if (data.pHLevel !== undefined) pHLevel.value = data.pHLevel
+        if (data.powerConsumption !== undefined) powerConsumption.value = data.powerConsumption
+        if (data.lastUpdate) lastUpdate.value = new Date(data.lastUpdate)
+        
+        console.log(`📈 Updated Dashboard: Flow=${flowRate.value}L/h, ORP=${orpLevel.value}mV, pH=${pHLevel.value}, Power=${powerConsumption.value}kW`)
+      })
+
+      // Listen for MQTT sensor data directly from MQTT Test server
+      socket.on('mqttSensorData', (data) => {
+        console.log('🔄 Received MQTT sensor data from mqtt_test/server.js:', data)
+        
+        // Handle the exact format from your MQTT subscriber via server.js
+        if (data.topic === 'sensors/combined' && data.payload) {
+          try {
+            const payload = typeof data.payload === 'string' ? JSON.parse(data.payload) : data.payload
+            
+            if (payload.devices) {
+              console.log('📊 Processing combined sensor data - Batch:', payload.batch)
+              
+              // Power meter data
+              if (payload.devices.power_meter_01) {
+                const powerData = payload.devices.power_meter_01
+                powerConsumption.value = (parseFloat(powerData.power) / 1000).toFixed(2)
+                console.log('⚡ Power updated:', powerConsumption.value + 'kW')
+              }
+              
+              // Flow rate data (convert L/min to L/h)
+              if (payload.devices.flow_rate_01) {
+                const flowData = payload.devices.flow_rate_01
+                const flowInLh = (parseFloat(flowData.value) * 60).toFixed(1)
+                flowRate.value = flowInLh
+                console.log('💧 Flow updated:', flowRate.value + 'L/h')
+              }
+              
+              // ORP data - average of both sensors
+              const orpValues = []
+              if (payload.devices.ORP_01) orpValues.push(parseFloat(payload.devices.ORP_01.value))
+              if (payload.devices.ORP_02) orpValues.push(parseFloat(payload.devices.ORP_02.value))
+              
+              if (orpValues.length > 0) {
+                const avgORP = orpValues.reduce((a, b) => a + b, 0) / orpValues.length
+                orpLevel.value = avgORP.toFixed(1)
+                console.log('🧪 ORP updated:', orpLevel.value + 'mV')
+              }
+              
+              // pH data - average of both sensors
+              const pHValues = []
+              if (payload.devices.pH_01) pHValues.push(parseFloat(payload.devices.pH_01.value))
+              if (payload.devices.pH_02) pHValues.push(parseFloat(payload.devices.pH_02.value))
+              
+              if (pHValues.length > 0) {
+                const avgPH = pHValues.reduce((a, b) => a + b, 0) / pHValues.length
+                pHLevel.value = avgPH.toFixed(2)
+                console.log('⚗️  pH updated:', pHLevel.value)
+              }
+              
+              // Update metadata
+              if (payload.device_count && payload.device_count.total) {
+                deviceCount.value = payload.device_count.total
+              }
+              
+              lastUpdate.value = new Date(payload.timestamp)
+              
+              console.log(`📈 Dashboard updated from MQTT: Flow=${flowRate.value}L/h, ORP=${orpLevel.value}mV, pH=${pHLevel.value}, Power=${powerConsumption.value}kW`)
+            }
+          } catch (error) {
+            console.error('❌ Error parsing MQTT sensor data:', error)
+          }
+        }
+      })
+
+      // Listen for MQTT data from external IoT devices
+      socket.on('mqttData', (data) => {
+        console.log('🌐 Received external MQTT device data:', data)
+        // This handles individual device messages from external publishers
+        if (data.data) {
+          const deviceData = data.data
+          console.log(`📡 External IoT Device: ${deviceData.deviceType} = ${deviceData.value}${deviceData.unit || ''}`)
+        }
       })
 
       // Listen for activity logs
@@ -257,6 +359,17 @@ export default {
         console.log('Device status update:', status)
         // You can add device status handling here
       })
+    }
+
+    // Helper function to format timestamp
+    const formatTime = (date) => {
+      if (!date) return '--'
+      return new Intl.DateTimeFormat('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: true
+      }).format(date)
     }
 
     onMounted(() => {
@@ -277,7 +390,11 @@ export default {
       orpLevel,
       pHLevel,
       powerConsumption,
-      connectionStatus
+      connectionStatus,
+      lastUpdate,
+      deviceCount,
+      isDataReceiving,
+      formatTime
     }
   }
 }
@@ -304,6 +421,37 @@ export default {
   border-radius: 8px;
   border: 1px solid #e2e8f0;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.data-status {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 12px;
+  background: #f8fafc;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  margin-top: 8px;
+}
+
+.data-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.data-label {
+  font-size: 11px;
+  color: #64748b;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.data-value {
+  font-size: 13px;
+  color: #1e293b;
+  font-weight: 600;
 }
 
 .status-indicator {
@@ -348,61 +496,112 @@ export default {
 
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: 1fr;
   gap: 24px;
   margin-bottom: 32px;
 }
 
-.stat-card {
+.combined-stat-card {
   background: white;
-  padding: 24px;
   border-radius: 12px;
   border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.card-header {
+  padding: 24px 24px 16px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.connection-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.sensor-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1px;
+  background: #f1f5f9;
+}
+
+.sensor-item {
+  background: white;
+  padding: 24px;
   display: flex;
   align-items: center;
   gap: 16px;
+  transition: all 0.3s ease;
 }
 
-.stat-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
+.sensor-item:hover {
+  background: #f8fafc;
+}
+
+.sensor-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
+  flex-shrink: 0;
 }
 
-.stat-icon.blue { background: #3b82f6; }
-.stat-icon.green { background: #10b981; }
-.stat-icon.purple { background: #8b5cf6; }
-.stat-icon.orange { background: #f59e0b; }
+.sensor-icon.blue { background: #3b82f6; }
+.sensor-icon.green { background: #10b981; }
+.sensor-icon.purple { background: #8b5cf6; }
+.sensor-icon.orange { background: #f59e0b; }
 
-.stat-content {
+.sensor-data {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
   flex: 1;
 }
 
-.stat-title {
-  font-size: 14px;
+.sensor-label {
+  font-size: 13px;
   color: #64748b;
-  margin: 0 0 4px 0;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
-.stat-value {
-  font-size: 24px;
+.sensor-value {
+  font-size: 20px;
   font-weight: 700;
   color: #1e293b;
-  margin: 0 0 4px 0;
-  transition: color 0.3s ease;
+  transition: all 0.3s ease;
 }
 
-.stat-value.real-time {
-  animation: valueUpdate 1s ease-in-out infinite alternate;
+.card-footer {
+  padding: 16px 24px;
+  background: #f8fafc;
+  border-top: 1px solid #f1f5f9;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
 }
 
-@keyframes valueUpdate {
-  0% { transform: scale(1); }
-  100% { transform: scale(1.02); }
+.last-update {
+  color: #64748b;
+  font-weight: 500;
+}
+
+.device-count {
+  color: #10b981;
+  font-weight: 600;
 }
 
 .live-indicator {
@@ -426,13 +625,6 @@ export default {
     box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
   }
 }
-
-.stat-change {
-  font-size: 12px;
-}
-
-.stat-change.positive { color: #10b981; }
-.stat-change.negative { color: #ef4444; }
 
 .charts-section {
   display: grid;
@@ -538,7 +730,7 @@ export default {
     grid-template-columns: 1fr;
   }
   
-  .stats-grid {
+  .sensor-grid {
     grid-template-columns: 1fr;
   }
   
@@ -550,6 +742,18 @@ export default {
   
   .connection-status {
     align-self: flex-start;
+  }
+  
+  .card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  
+  .card-footer {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
   }
 }
 </style>

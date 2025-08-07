@@ -10,6 +10,7 @@ const Products = () => import('./views/Products.vue')
 const Analytics = () => import('./views/Analytics.vue')
 const Settings = () => import('./views/Settings.vue')
 const DataTable = () => import('./views/DataTable.vue')
+const MQTTDashboard = () => import('./views/MQTTDashboard.vue')
 
 // Create router
 const routes = [
@@ -42,6 +43,12 @@ const routes = [
     name: 'DataTable', 
     component: DataTable,
     meta: { title: 'Data Table' }
+  },
+  { 
+    path: '/mqtt-dashboard', 
+    name: 'MQTTDashboard', 
+    component: MQTTDashboard,
+    meta: { title: 'MQTT Dashboard' }
   },
   { 
     path: '/settings', 
