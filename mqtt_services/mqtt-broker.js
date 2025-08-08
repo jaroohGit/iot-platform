@@ -16,8 +16,9 @@ const server = net.createServer(aedes.handle)
 const httpServer = http.createServer()
 const wsServer = new ws.Server({ server: httpServer })
 
-// Store connected clients info
+// Store connected clients info and topic tracking
 let connectedClients = new Map()
+let topicStats = new Map() // Track unique topics and their message counts
 
 // WebSocket handler for MQTT over WebSocket
 wsServer.on('connection', function (socket) {
@@ -54,39 +55,23 @@ aedes.on('client', function (client) {
     messageCount: 0
   })
   
-  console.log(`✅ Client connected: ${client.id}`)
-  console.log(`   - Protocol: ${connectionType}`)
-  console.log(`   - IP Address: ${clientIP}`)
-  console.log(`   - Total clients: ${Object.keys(aedes.clients).length}`)
-  console.log(`   - Connection time: ${new Date().toISOString()}`)
+  console.log(`✅ Client connected: ${client.id} (${connectionType} from ${clientIP})`)
 })
 
 aedes.on('clientDisconnect', function (client) {
   const clientInfo = connectedClients.get(client.id)
-  const clientIP = clientInfo?.ip || client.conn?.remoteAddress || 'unknown'
+  const clientIP = clientInfo?.ip || 'unknown'
   
-  console.log(`❌ Client disconnected: ${client.id}`)
-  console.log(`   - IP Address: ${clientIP}`)
-  console.log(`   - Messages sent: ${clientInfo?.messageCount || 0}`)
-  console.log(`   - Remaining clients: ${Object.keys(aedes.clients).length}`)
-  
+  console.log(`❌ Client disconnected: ${client.id} (${clientInfo?.messageCount || 0} messages)`)
   connectedClients.delete(client.id)
 })
 
 aedes.on('subscribe', function (subscriptions, client) {
-  const clientInfo = connectedClients.get(client.id)
-  console.log(`📥 Client ${client.id} (${clientInfo?.ip || 'unknown'}) subscribed to:`)
-  subscriptions.forEach(sub => {
-    console.log(`   - ${sub.topic} (QoS: ${sub.qos})`)
-  })
+  console.log(`📥 ${client.id} subscribed to ${subscriptions.length} topic(s)`)
 })
 
 aedes.on('unsubscribe', function (subscriptions, client) {
-  const clientInfo = connectedClients.get(client.id)
-  console.log(`📤 Client ${client.id} (${clientInfo?.ip || 'unknown'}) unsubscribed from:`)
-  subscriptions.forEach(topic => {
-    console.log(`   - ${topic}`)
-  })
+  console.log(`📤 ${client.id} unsubscribed from ${subscriptions.length} topic(s)`)
 })
 
 aedes.on('publish', function (packet, client) {
@@ -95,33 +80,44 @@ aedes.on('publish', function (packet, client) {
   
   if (client) {
     const clientInfo = connectedClients.get(client.id)
-    const clientIP = clientInfo?.ip || 'unknown'
     
     // Update message count
     if (clientInfo) {
       clientInfo.messageCount++
     }
     
-    console.log(`📨 Message from ${client.id} (${clientIP}):`)
-    console.log(`   - Topic: ${packet.topic}`)
-    
-    // Parse and display payload in a readable format
-    try {
-      const data = JSON.parse(packet.payload.toString())
-      console.log(`   - Device: ${data.deviceId || 'unknown'} (${data.deviceType || 'unknown'})`)
-      console.log(`   - Value: ${data.value}${data.unit || ''}`)
-      console.log(`   - Location: ${data.location || 'unknown'}`)
-      console.log(`   - Quality: ${data.quality || 'unknown'}`)
-      if (data.metadata?.hostname) {
-        console.log(`   - Source Host: ${data.metadata.hostname}`)
-      }
-    } catch (e) {
-      const payload = packet.payload.toString()
-      console.log(`   - Payload: ${payload.length > 100 ? payload.substring(0, 100) + '...' : payload}`)
+    // Track topic statistics
+    if (topicStats.has(packet.topic)) {
+      topicStats.set(packet.topic, topicStats.get(packet.topic) + 1)
+    } else {
+      topicStats.set(packet.topic, 1)
+      console.log(`🆕 NEW TOPIC discovered: ${packet.topic}`)
     }
     
-    console.log(`   - QoS: ${packet.qos} | Retain: ${packet.retain}`)
-    console.log(`   - Message #${clientInfo?.messageCount || '?'} from this client`)
+    // Log ALL topics that clients send to
+    console.log(`📨 Message #${clientInfo?.messageCount || '?'} from ${client.id}: ${packet.topic}`)
+    
+    // Show payload summary for sensor data
+    if (packet.topic.includes('sensors/combined')) {
+      try {
+        const data = JSON.parse(packet.payload.toString())
+        if (data.devices) {
+          console.log(`   📊 Sensor batch: ${data.batch || '?'} with ${Object.keys(data.devices).length} devices`)
+        }
+      } catch (e) {
+        console.log(`   📊 Sensor payload: ${packet.payload.toString().substring(0, 100)}...`)
+      }
+    } else if (packet.topic.includes('alert') || packet.topic.includes('error') || packet.topic.includes('warning')) {
+      console.log(`   ⚠️  Alert payload: ${packet.payload.toString().substring(0, 200)}`)
+    } else {
+      // Show first part of payload for other topics
+      const payload = packet.payload.toString()
+      if (payload.length > 50) {
+        console.log(`   📄 Payload: ${payload.substring(0, 50)}...`)
+      } else {
+        console.log(`   📄 Payload: ${payload}`)
+      }
+    }
   }
 })
 
@@ -136,10 +132,7 @@ aedes.on('connectionError', function (client, err) {
 
 // Add basic authentication (optional - currently allows all)
 aedes.authenticate = function (client, username, password, callback) {
-  const clientIP = client.conn?.remoteAddress || 'unknown'
-  console.log(`🔐 Authentication request from ${clientIP}: ${username || 'anonymous'}`)
-  
-  // For now, allow all connections
+  // For now, allow all connections silently
   // You can add authentication logic here if needed
   callback(null, true)
 }
@@ -207,24 +200,24 @@ httpServer.listen(WS_PORT, HOST, function () {
   console.log(`🌐 WebSocket MQTT server ready on ${HOST}:${WS_PORT}`)
 })
 
-// Display statistics every 30 seconds
+// Display statistics every 5 minutes instead of 30 seconds
 setInterval(() => {
   const clientCount = Object.keys(aedes.clients).length
   if (clientCount > 0) {
-    console.log(`\n📊 Broker Statistics (${new Date().toISOString()}):`)
-    console.log(`   - Connected clients: ${clientCount}`)
-    
     const totalMessages = Array.from(connectedClients.values())
       .reduce((sum, client) => sum + client.messageCount, 0)
-    console.log(`   - Total messages processed: ${totalMessages}`)
     
-    console.log(`   - Active clients:`)
-    connectedClients.forEach((clientInfo, clientId) => {
-      const duration = Math.floor((new Date() - clientInfo.connectedAt) / 1000)
-      console.log(`     • ${clientId} (${clientInfo.ip}) - ${clientInfo.messageCount} msgs, ${duration}s online`)
-    })
+    console.log(`\n📊 Broker Stats: ${clientCount} clients, ${totalMessages} total messages`)
+    
+    if (topicStats.size > 0) {
+      console.log(`📋 Topics discovered (${topicStats.size} unique):`)
+      for (const [topic, count] of topicStats.entries()) {
+        console.log(`   • ${topic}: ${count} messages`)
+      }
+    }
+    console.log('') // Empty line for readability
   }
-}, 30000)
+}, 300000) // 5 minutes
 
 // Error handling
 server.on('error', function (err) {
@@ -260,6 +253,14 @@ process.on('SIGINT', function () {
   const totalMessages = Array.from(connectedClients.values())
     .reduce((sum, client) => sum + client.messageCount, 0)
   console.log(`   - Total messages processed: ${totalMessages}`)
+  
+  if (topicStats.size > 0) {
+    console.log(`   - Unique topics discovered: ${topicStats.size}`)
+    console.log(`📋 All topics used:`)
+    for (const [topic, count] of topicStats.entries()) {
+      console.log(`     • ${topic}: ${count} messages`)
+    }
+  }
   
   aedes.close(function () {
     console.log('✅ Aedes broker closed')
